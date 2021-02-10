@@ -63,15 +63,23 @@
 			<div class="row">			
 				<div class="col-12">	
 				<h1>Obstruction Viewer For Starlink</h1>
-				<p> If using Starlink router, please go to your <a href="javascript://" onClick="window.open('//192.168.100.1/support/debug','starlink')">STARLINK Debug Panel</a>: , after a few seconds, you will see code. Click anywhere in the area where you see the code, hit CTRL key + A. This will select the code in blue. Then hit CTRL+C. This copies all the information. Come back to this page, click in the white box on the left and paste (CTRL+V) your code into the box. A graph will appear if you have obstructions. If not, you are good!</p>
+				<p> If using Starlink router, please go to your <a href="#" onClick="window.open('//192.168.100.1/support/debug','starlink')">STARLINK Debug Panel</a>: , after a few seconds, you will see code. Click anywhere in the area where you see the code, hit CTRL key + A. This will select the code in blue. Then hit CTRL+C. This copies all the information. Come back to this page, click in the white box on the left and paste (CTRL+V) your code into the box. A graph will appear if you have obstructions. If not, you are good!</p>
+                                <p>Credit for creating this viewer goes to <a href="https://www.reddit.com/user/ChuckTSI/">u/ChuckTSI</a>, who originally shared it in a <a href="https://www.reddit.com/r/Starlink/comments/lh03sq/obstruction_viewer/">reddit thread</a>. It is rehosted here with modifications to demonstrate questions.
 				</div>
-				<div class="col-5">	
+				<div class="col-4">	
 				<textarea id="sljson" style="width: 100%; height: 100%; color: #000; font-size: 12px;" placeholder="Paste Code Here"></textarea>
 				</div>
-				<div class="col-7">	
+				<div class="col-4">	
 				<div style="font-size: 20px;" id="no" class="fade"><i class="fa fa-thumbs-up" style="font-size: 70px;"></i> No Obstructions!</div>
 				<center><figure class="highcharts-figure fade" id="hc" style="">
 					<div id="hccontainer"></div>
+				</figure>
+				</center>
+			</div>
+				<div class="col-4">	
+				<div style="font-size: 20px;" id="noabs" class="fade"><i class="fa fa-thumbs-up" style="font-size: 70px;"></i> No Obstructions!</div>
+				<center><figure class="highcharts-figure fade" id="hcabs" style="">
+					<div id="hcabscontainer"></div>
 				</figure>
 				</center>
 			</div>
@@ -93,6 +101,7 @@
 	<script>
 
 	var hcdata = [,,,,,,,,,,,];
+	var hcabsdata = [,,,,,,,,,,,];
 
 	Highcharts.setOptions({
 		colors: ['rgba(255,255,255,0.50)']
@@ -179,8 +188,94 @@
 
 		series: [{
 			type: 'column',
-			name: '',
+			name: 'wedgeFraction',
 			data: hcdata,
+			pointPlacement: 'between'
+	}]
+	});
+	var obs_abschart = Highcharts.chart('hcabscontainer', {
+
+		chart: {
+			backgroundColor: 'rgba(0,0,0,0)',
+			polar: true,
+			animation: {
+				duration: 1500,
+				easing: 'easeOutBounce'
+			},
+			exporting: { enabled: false }
+		},
+
+		title: {
+			text: 'Abs Obstructions Chart',
+			style: {
+				color: 'rgba(15,218,168,0.75)'
+			}				
+		},
+			subtitle: {
+			text: 'NORTH',
+			style: {
+				color: 'rgba(15,218,168,0.75)'
+			}				
+		},
+
+		
+
+		pane: {
+			startAngle: 0,
+			endAngle: 360
+		},
+		legend: false,
+
+		xAxis: {
+			tickInterval: 30,
+			min: 0,
+			max: 360,
+			labels: {
+				format: '{value}°',
+				style: {
+					color: 'rgba(15,218,168,0.75)'
+				  }
+			},
+			lineColor: '#043324',
+			alternateGridColor: true,
+			breaks: false,
+			gridLineColor: 'rgba(0,0,0,0)',
+			chartRange: 5,
+			showEmpty: false
+			
+		},
+
+		yAxis: {
+			min: 0,
+			tickInterval: 2,
+			labels: {
+				formatter() {
+					return this.value+'%'; 
+				},
+				style: {
+					color: 'rgba(255,255,255,0.55)'
+				  }
+			},
+			gridLineColor: '#043324',
+				minorGridLineWidth: 0
+		},
+
+		plotOptions: {
+			series: {
+				pointStart: 0,
+				pointInterval: 30
+			},
+			column: {
+				pointPadding: 0,
+				groupPadding: 0,
+				fillColor: 'rgba(144,237,125,0.75)'	
+			}
+		},
+
+		series: [{
+			type: 'column',
+			name: 'wedgeAbsFraction',
+			data: hcabsdata,
 			pointPlacement: 'between'
 		}]
 	});
@@ -211,6 +306,13 @@
 				cleaned_wedgeFrac.push(mynum);
 				totalobs = totalobs + mynum;
 			})	
+			var cleaned_wedgeAbsFrac = [];
+			var totalabsobs = 0;
+			$.each(sljsondata.dish.obstructionStats.wedgeAbsFractionObstructedList,function(i,v){
+				var mynum = parseFloat((v*100).toFixed(2))
+				cleaned_wedgeAbsFrac.push(mynum);
+				totalabsobs = totalabsobs + mynum;
+			})	
 			if(totalobs > 0){
 				if( JSON.stringify(obs_chart.series[0].processedYData) !== JSON.stringify(cleaned_wedgeFrac) ){
 					obs_chart.series[0].setData(cleaned_wedgeFrac, true, true, true);
@@ -220,6 +322,16 @@
 			} else {
 				$("#hc").addClass('fade');
 				$("#no").removeClass('fade');
+			}
+			if(totalabsobs > 0){
+				if( JSON.stringify(obs_abschart.series[0].processedYData) !== JSON.stringify(cleaned_wedgeAbsFrac) ){
+					obs_abschart.series[0].setData(cleaned_wedgeAbsFrac, true, true, true);
+				}
+				$("#noabs").addClass('fade');
+				$("#hcabs").removeClass('fade');
+			} else {
+				$("#hcabs").addClass('fade');
+				$("#noabs").removeClass('fade');
 			}
 
 			$("#sljson").val('');
